@@ -1,7 +1,7 @@
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import TransactionModel
-from .serializers import TransactionSerializer
+from .models import TransactionModel, TransactionSumModel
+from .serializers import TransactionSerializer, TransactionSumSerializer
 import json
 
 @csrf_exempt
@@ -42,6 +42,7 @@ def transaction_request(request, tid):
 			serializer = TransactionSerializer(data=data)
 			if serializer.is_valid():
 				serializer.save()
+				addsum(tid, body['amount'])
 				return JsonResponse({"Status": "Ok"}) # return success on creating a new entry
 			return JsonResponse(serializer.errors, status=400) # errors in case of failures
 		return JsonResponse({"Error": "Transaction already Exists"}, safe=False) # return error if entry already exists
@@ -67,5 +68,27 @@ def transaction_type(request, ttype):
 
 @csrf_exempt
 def transaction_sum(request, tsum):
-	return HttpResponse("transaction_sum")
+	try:
+		sumtransaction = TransactionSumModel.objects.get(transaction_id=tsum).values('sumamount')
+	except TransactionSumModel.DoesNotExist:
+		return HttpResponse(status=404)
+	sumamount = sumtransaction['sumamount']
+	return JsonResponse({"sum": sumamount}, safe=False)
 
+
+def addsum(tid, tsum):
+	"""
+	addsum()
+	function is called during the insertion of a new transaction entry into database
+	updates sum value of every parent node if there is a paren child relation
+	"""
+	transaction = TransactionModel.objects.get(transaction_id=tid)
+
+	# if 'parent_id' in transaction and transaction['parent_id'] is not None: 
+	# 	parent_id = transaction['parent_id']
+	# 	parent_transaction = TransactionModel.objects.get(parent_id=parent_id)
+	# 	parent_transaction['amount'] += tsum
+	# 	serializer = TransactionSerializer(data=parent_transaction)
+	# 	if serializer.is_valid():
+	# 		serializer.save()
+	# 	return addsum(parent_id, tsum)
