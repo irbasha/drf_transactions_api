@@ -49,7 +49,21 @@ def transaction_request(request, tid):
 
 @csrf_exempt
 def transaction_type(request, ttype):
-	return HttpResponse("transaction_type")
+	"""
+	transaction_type()
+	view function to read all the transactions of a specific type and return in response
+	"""
+	try:
+		transaction = TransactionModel.objects.filter(type__contains=ttype).values('transaction_id') # select only transaction_ids of all the transactions of specific_type
+	except TransactionModel.DoesNotExist:
+		return JsonResponse({"Error": "Transaction DoesNotExist for its Type"}, safe=False)
+
+	if request.method == 'GET': # Validating the request
+		idlist = []
+		for eachtransaction in transaction:
+			tid = eachtransaction['transaction_id']
+			idlist.append(tid) # adding transaction_id of every transaction to the list
+		return JsonResponse(idlist, safe=False)
 
 @csrf_exempt
 def transaction_sum(request, tsum):
